@@ -1,8 +1,6 @@
 import os
+import sys
 import re
-
-
-BASE_DIR="/Users/shad/forks/dagger/docs/current"
 
 
 def sanitize(filepath):
@@ -28,8 +26,7 @@ def sanitize(filepath):
         match = False
 
         for match in re.finditer(r"file=(\./.*)\n", data):
-            fname = match.group(1)
-            fpath = os.path.join(BASE_DIR, fname)
+            fpath = match.group(1)
             with open(fpath) as f:
                 data = "{}\n{}\n{}".format(data[:match.start(0)], f.read(), data[match.end(0):])
             match = True
@@ -43,5 +40,13 @@ def sanitize(filepath):
 
 
 if __name__ == "__main__":
-    doc = sanitize("/Users/shad/forks/dagger/docs/current/742989-cookbook.md")
-    print(doc)
+    if len(sys.argv) < 3:
+        print(f"Usage: {sys.argv[0]} input-path output-path")
+        sys.exit(1)
+
+    input_file = sys.argv[1]
+    output_file = sys.argv[2]
+
+    doc = sanitize(input_file)
+    with open(output_file, "+w") as f:
+        f.write(doc)

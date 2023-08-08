@@ -32,25 +32,10 @@ def index():
 
     texts = []
 
-    loader = UnstructuredMarkdownLoader("./cookbook.md")
+    loader = DirectoryLoader("assets/docs", glob="**/*.md", show_progress=True)
     documents = loader.load()
     text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
     texts.extend(text_splitter.split_documents(documents))
-
-    def index_documents(path, glob):
-        loader = DirectoryLoader(path, glob=glob, show_progress=True)
-        # loader = UnstructuredHTMLLoader("/Users/shad/Downloads/Cookbook Dagger.html", mode="single")
-        documents = loader.load()
-        text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
-        texts.extend(text_splitter.split_documents(documents))
-
-    # # loader = DirectoryLoader("/Users/shad/websites/dagger-docs/docs.dagger.io", glob="**/*.html")
-    # index_documents("/Users/shad/forks/dagger/docs/current", "**/*.md")
-    # index_documents("/Users/shad/forks/dagger/docs/current", "**/*.py")
-    # index_documents("/Users/shad/forks/dagger/docs/current", "**/*.go")
-    index_documents("/Users/shad/forks/dagger/docs/current", "*-index.md")
-    index_documents("/Users/shad/forks/dagger", "CHANGELOG.md")
-    index_documents("/Users/shad/forks/dagger/.changes", "v*.md")
 
     # embeddings = OpenAIEmbeddings()
     #FIXME: llamacpp embeddings is super slow
