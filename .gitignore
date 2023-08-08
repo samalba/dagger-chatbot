@@ -159,6 +159,5 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
-# Model weights
-assets/model/*.bin
-assets/docs/
+# Genereted assets from the dagger pipeline
+assets/
