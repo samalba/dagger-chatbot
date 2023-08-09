@@ -2,18 +2,32 @@
 
 Chatbot that understands Dagger pipelines
 
-## How to
+## Generate assets
 
-The code is not ready to run outside of my dev env...
+Several assets are needed for the chatbot to run:
 
-Few notes:
+- Split and tokenize the dagger docs from the git repository
+- Vectorize them in a vector db (Chroma)
+- Fetch the llama-2 model file
 
-- Download the llamma-2 weights (optimized for chat, quantized on 4 bits) - I guess it works as well with the base model, store it under `model/llama-2-7b-chat.ggmlv3.q4_0.bin`
-- Grab [the cookbook from the dagger repo](https://github.com/dagger/dagger/blob/main/docs/current/742989-cookbook.md)
-- Sanitize it with `python ./sanitize_cookbook.py > cookbook.md`
-- Run the chat: `python ./app.py`
-- Some indexing is done on the dagger repo (change the fs path to the proper cloned location), in particular the changelog
+How to generate the assets:
 
-Next:
+```shell
+./dagger_pipeline.py
+```
 
-- Everything will be portable and init with a dagger pipeline
+## Install the local python dependencies
+
+Run the following commands in a shell:
+
+```shell
+python3 -m venv
+CMAKE_ARGS="-DLLAMA_METAL=on" FORCE_CMAKE=1 pip install llama-cpp-python
+pip install -r requirements.txt
+```
+
+## Run the chatbot
+
+```shell
+./app.py
+```

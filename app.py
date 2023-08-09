@@ -1,48 +1,17 @@
+#!/usr/bin/env python
 import os
 
-from langchain.document_loaders import DirectoryLoader, UnstructuredHTMLLoader, UnstructuredMarkdownLoader
-
 from langchain import PromptTemplate
-
 from langchain.chains import RetrievalQA
-# from langchain.embeddings.openai import OpenAIEmbeddings
-# from langchain.llms import OpenAI
-# from langchain.chat_models import ChatOpenAI
-from langchain.text_splitter import CharacterTextSplitter
 from langchain.vectorstores import Chroma
-
 from langchain.llms import LlamaCpp
 from langchain.callbacks.manager import CallbackManager
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 
-from langchain.embeddings import HuggingFaceEmbeddings #, SentenceTransformerEmbeddings
-# from langchain.embeddings import LlamaCppEmbeddings
-
 import langchain; langchain.debug = True
 
 #NOTE: install: CMAKE_ARGS="-DLLAMA_METAL=on" FORCE_CMAKE=1 pip install llama-cpp-python
-MODEL_PATH = "./model/llama-2-7b-chat.ggmlv3.q4_0.bin"
-
-def index():
-    #TODO: separate the indexing so it can happen only once if needed
-    # daggerize the index via git clone + chromadb + fetch llama2 ggml
-    #TODO: sanitize output to properly map code snippet to markdown text (embed code inline)
-    #TODO: strip the markdown from useless chars
-    #TODO: experiment with LoRa fine-tuning instead of prompt composition (llama, lora_path arg)
-
-    texts = []
-
-    loader = DirectoryLoader("assets/docs", glob="**/*.md", show_progress=True)
-    documents = loader.load()
-    text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
-    texts.extend(text_splitter.split_documents(documents))
-
-    # embeddings = OpenAIEmbeddings()
-    #FIXME: llamacpp embeddings is super slow
-    # embeddings = LlamaCppEmbeddings(model_path=MODEL_PATH)
-    embeddings = HuggingFaceEmbeddings()
-    vectore_store = Chroma.from_documents(texts, embeddings)
-    return vectore_store
+MODEL_PATH = "./assets/model/llama-2-7b-chat.ggmlv3.q4_0.bin"
 
 
 def init_llama_cpp():
@@ -82,10 +51,10 @@ def prompt_template():
     return PromptTemplate(template=template, input_variables=["context", "question"])
 
 
-
-
 if __name__ == "__main__":
-    store = index()
+    from langchain.embeddings import HuggingFaceEmbeddings
+    embeddings = HuggingFaceEmbeddings()
+    store = Chroma(embedding_function=embeddings, persist_directory="assets/vectordb")
 
     qa = RetrievalQA.from_chain_type(llm=init_llama_cpp(),
                                      chain_type="stuff",
@@ -101,7 +70,3 @@ if __name__ == "__main__":
         query = input("> ")
         result = qa.run(query)
         print(f"Answer: {result}")
-
-    # import pprint
-    # pp = pprint.PrettyPrinter(indent=4)
-    # pp.pprint(out)

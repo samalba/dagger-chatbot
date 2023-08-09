@@ -18,7 +18,8 @@ def split_vectorize_docs(input_directory, vectordb_path):
     #FIXME: llamacpp embeddings is super slow
     # embeddings = LlamaCppEmbeddings(model_path=MODEL_PATH)
     embeddings = HuggingFaceEmbeddings()
-    Chroma.from_documents(texts, embeddings, persist_directory=vectordb_path)
+    vectordb = Chroma.from_documents(texts, embeddings, persist_directory=vectordb_path)
+    vectordb.persist()
 
 
 if __name__ == "__main__":
