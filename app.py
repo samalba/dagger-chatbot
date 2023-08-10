@@ -1,16 +1,17 @@
 #!/usr/bin/env python
 import os
 
+import langchain
 from langchain import PromptTemplate
 from langchain.chains import RetrievalQA
 from langchain.vectorstores import Chroma
+from langchain.chat_models import ChatOpenAI
+from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.llms import LlamaCpp
 from langchain.callbacks.manager import CallbackManager
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 
-import langchain; langchain.debug = True
 
-#NOTE: install: CMAKE_ARGS="-DLLAMA_METAL=on" FORCE_CMAKE=1 pip install llama-cpp-python
 MODEL_PATH = "./assets/model/llama-2-7b-chat.ggmlv3.q4_0.bin"
 
 
@@ -29,10 +30,10 @@ def init_llama_cpp():
         temperature=0.8,
         n_threads=os.cpu_count(),
         callback_manager=callback_manager,
-
-#        echo=True,
-        verbose=True,
     )
+
+    if os.environ.get("DEBUG"):
+        llm.verbose = True
 
     return llm
 
@@ -52,19 +53,23 @@ def prompt_template():
 
 
 if __name__ == "__main__":
-    from langchain.embeddings import HuggingFaceEmbeddings
     embeddings = HuggingFaceEmbeddings()
     store = Chroma(embedding_function=embeddings, persist_directory="assets/vectordb")
+
+    # experiments with the memory to handle a conversation
+    # from langchain.memory import ConversationBufferMemory
+    # memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
 
     qa = RetrievalQA.from_chain_type(llm=init_llama_cpp(),
                                      chain_type="stuff",
                                      retriever=store.as_retriever(),
                                      chain_type_kwargs={"prompt": prompt_template()},
-                                     verbose=True)
-#                                     return_source_documents=True)
+                                    #  memory=memory,
+                                    )
 
-    # out = chain({"query": question})
-    # result = out.get("result")
+    if os.environ.get("DEBUG"):
+        langchain.debug = True
+        qa.verbose = True
 
     while True:
         query = input("> ")

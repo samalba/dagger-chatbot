@@ -21,7 +21,7 @@ How to generate the assets:
 Run the following commands in a shell:
 
 ```shell
-python3 -m venv
+python3 -m venv venv && source ./venv/bin/activate
 CMAKE_ARGS="-DLLAMA_METAL=on" FORCE_CMAKE=1 pip install llama-cpp-python
 pip install -r requirements.txt
 ```
