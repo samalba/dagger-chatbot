@@ -5,7 +5,7 @@ import langchain
 from langchain import PromptTemplate
 from langchain.chains import RetrievalQA
 from langchain.vectorstores import Chroma
-from langchain.chat_models import ChatOpenAI
+#from langchain.chat_models import ChatOpenAI
 from langchain.embeddings import HuggingFaceEmbeddings
 from langchain.llms import LlamaCpp
 from langchain.callbacks.manager import CallbackManager
@@ -14,9 +14,17 @@ from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 
 MODEL_PATH = "./assets/model/llama-2-7b-chat.ggmlv3.q4_0.bin"
 
+#MODEL_PATH = "./assets/model/luna-ai-llama2-uncensored.ggmlv3.q4_0.bin"
+#MODEL_PATH = "./assets/model/stable-platypus2-13b.ggmlv3.q4_0.bin"
+
+#MODEL_PATH = "./assets/model/codeup-llama-2-13b-chat-hf.ggmlv3.q4_0.bin" # meh
+#MODEL_PATH = "./assets/model/llama-2-13b-chat.ggmlv3.q4_0.bin"
+#MODEL_PATH= "./assets/model/llama2_7b_chat_uncensored.ggmlv3.q4_0.bin" # meh
+
+
 
 def init_llama_cpp():
-    # llm = ChatOpenAI()
+    # llm = ChatOpenAI(verbose=bool(os.environ.get("DEBUG")))
 
     callback_manager = CallbackManager([StreamingStdOutCallbackHandler()])
     llm = LlamaCpp(
@@ -31,9 +39,7 @@ def init_llama_cpp():
         n_threads=os.cpu_count(),
         callback_manager=callback_manager,
     )
-
-    if os.environ.get("DEBUG"):
-        llm.verbose = True
+    llm.client.verbose = bool(os.environ.get("DEBUG"))
 
     return llm
 
@@ -41,7 +47,7 @@ def init_llama_cpp():
 def prompt_template():
     #FIXME: improve initial context
     template = """Answer the questions based on the context below. If the question cannot be answered
-    using the information provided answer with "I don't know".
+    using the information provided answer with "I don't know". Don't include new questions in your answers.
 
     Context: {context}
 
@@ -53,7 +59,7 @@ def prompt_template():
 
 
 if __name__ == "__main__":
-    embeddings = HuggingFaceEmbeddings()
+    embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
     store = Chroma(embedding_function=embeddings, persist_directory="assets/vectordb")
 
     # experiments with the memory to handle a conversation
@@ -67,11 +73,11 @@ if __name__ == "__main__":
                                     #  memory=memory,
                                     )
 
-    if os.environ.get("DEBUG"):
-        langchain.debug = True
-        qa.verbose = True
+    debug = bool(os.environ.get("DEBUG"))
+    langchain.debug = debug
+    qa.verbose = debug
 
-    while True:
-        query = input("> ")
-        result = qa.run(query)
-        print(f"Answer: {result}")
+    print("\033c\033[3J", end='')
+    print(f"Using model: {MODEL_PATH}")
+    query = input("Ask me anything about Dagger: ")
+    result = qa.run(query)
