@@ -1,4 +1,4 @@
 chromadb==0.4.3
-langchain==0.0.247
+langchain==0.0.262
 unstructured==0.8.7
 sentence-transformers==2.2.2
