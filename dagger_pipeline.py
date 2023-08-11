@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import os
 import sys
 import anyio
 
@@ -21,9 +22,14 @@ def sanitize_documents(client: dagger.Client) -> dagger.Directory:
         .directory("/out")
     )
 
-    # Add the changelog files to the sanitized docs
+    # Add other files we want to index
     docs = directory.with_directory(".", dagger_repository,
-                                      include=[".changes/v*.md", "CHANGELOG.md"])
+                                    include=[
+                                        ".changes/v*.md",
+                                        "CHANGELOG.md",
+                                        "docs/current/index.md",
+                                        "docs/current/faq.md",
+                                        ])
 
     return docs
 
@@ -44,7 +50,7 @@ def split_vectorize_documents(client: dagger.Client, docs: dagger.Directory) -> 
         # install system dependencies for building python libraries
         .with_exec(["sh", "-c", "apt-get update && apt-get install -y build-essential sqlite3 && rm -rf /var/lib/apt/lists/*"])
         # install python dependencies
-        .with_exec(["pip", "install", "--no-cache-dir", "-r", "/app/requirements.txt"])
+        .with_exec(["pip", "install", "-r", "/app/requirements.txt"])
         .with_exec(["python", "/app/app.py", "/docs", "/out"])
         .directory("/out")
     )
@@ -55,6 +61,11 @@ def split_vectorize_documents(client: dagger.Client, docs: dagger.Directory) -> 
 def fetch_model(client: dagger.Client) -> dagger.Directory:
     filename = "llama-2-7b-chat.ggmlv3.q4_0.bin"
     model_file = client.http(f"https://huggingface.co/TheBloke/Llama-2-7B-Chat-GGML/resolve/main/{filename}")
+    model_filepath = os.path.join(f"assets/model/{filename}")
+
+    if os.path.exists(model_filepath):
+        print(f"Skipping model file download, use the one found at: {model_filepath}")
+        return client.directory()
 
     directory = (
         client.directory()
