@@ -58,32 +58,37 @@ def split_vectorize_documents(client: dagger.Client, docs: dagger.Directory) -> 
     return directory
 
 
-def fetch_model(client: dagger.Client) -> dagger.Directory:
-    filename = "llama-2-7b-chat.ggmlv3.q4_0.bin"
-    model_file = client.http(f"https://huggingface.co/TheBloke/Llama-2-7B-Chat-GGML/resolve/main/{filename}")
-    model_filepath = os.path.join(f"assets/model/{filename}")
+# def fetch_model(client: dagger.Client) -> dagger.Directory:
+#     filename = "llama-2-7b-chat.ggmlv3.q4_0.bin"
+#     model_file = client.http(f"https://huggingface.co/TheBloke/Llama-2-7B-Chat-GGML/resolve/main/{filename}")
+#     model_filepath = os.path.join(f"assets/model/{filename}")
 
-    if os.path.exists(model_filepath):
-        print(f"Skipping model file download, use the one found at: {model_filepath}")
-        return client.directory()
+#     if os.path.exists(model_filepath):
+#         print(f"Skipping model file download, use the one found at: {model_filepath}")
+#         return client.directory()
 
-    directory = (
-        client.directory()
-        .with_file(path=filename, source=model_file)
-    )
+#     directory = (
+#         client.directory()
+#         .with_file(path=filename, source=model_file)
+#     )
 
-    return directory
+#     return directory
+
+
+def initialize_ollama(client: dagger.Client):
+    ollama_repository = client.git("https://github.com/jmorganca/ollama.git").branch("main").tree()
+    ollama = ollama_repository.docker_build()
+    ollama.with_exec(["pull", "llama2"])
 
 
 async def generate_assets():
     async with dagger.Connection(dagger.Config(log_output=sys.stderr)) as client:
         documents = sanitize_documents(client)
         vectordb = split_vectorize_documents(client, documents)
-        model_file = fetch_model(client)
 
         async with anyio.create_task_group() as tg:
             tg.start_soon(vectordb.export, "assets/vectordb")
-            tg.start_soon(model_file.export, "assets/model")
+            #tg.start_soon(model_file.export, "assets/model")
 
 
 if __name__ == "__main__":
