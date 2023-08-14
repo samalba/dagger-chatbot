@@ -7,53 +7,33 @@ from langchain.chains import RetrievalQA
 from langchain.vectorstores import Chroma
 #from langchain.chat_models import ChatOpenAI
 from langchain.embeddings import HuggingFaceEmbeddings
-from langchain.llms import LlamaCpp
+from langchain.llms import Ollama
 from langchain.callbacks.manager import CallbackManager
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 
 
-MODEL_PATH = "./assets/model/llama-2-7b-chat.ggmlv3.q4_0.bin"
+def init_llm():
+    debug = bool(os.environ.get("DEBUG"))
 
-#MODEL_PATH = "./assets/model/luna-ai-llama2-uncensored.ggmlv3.q4_0.bin"
-#MODEL_PATH = "./assets/model/stable-platypus2-13b.ggmlv3.q4_0.bin"
+    # uncomment to use openai (requires OPENAI_API_KEY env var)
+    #llm = ChatOpenAI(verbose=debug)
 
-#MODEL_PATH = "./assets/model/codeup-llama-2-13b-chat-hf.ggmlv3.q4_0.bin" # meh
-#MODEL_PATH = "./assets/model/llama-2-13b-chat.ggmlv3.q4_0.bin"
-#MODEL_PATH= "./assets/model/llama2_7b_chat_uncensored.ggmlv3.q4_0.bin" # meh
-
-
-
-def init_llama_cpp():
-    # llm = ChatOpenAI(verbose=bool(os.environ.get("DEBUG")))
-
-    callback_manager = CallbackManager([StreamingStdOutCallbackHandler()])
-    llm = LlamaCpp(
-        model_path=MODEL_PATH,
-        n_gpu_layers=1,
-        n_batch=512,
-        n_ctx=2048,
-        use_mlock=False,
-        use_mmap=True,
-        f16_kv=True,
-        temperature=0.8,
-        n_threads=os.cpu_count(),
-        callback_manager=callback_manager,
+    llm = Ollama(
+        model="llama2",
+        verbose=debug,
+        callback_manager=CallbackManager([StreamingStdOutCallbackHandler()])
     )
-    llm.client.verbose = bool(os.environ.get("DEBUG"))
 
     return llm
 
 
 def prompt_template():
-    #FIXME: improve initial context
-    template = """Answer the questions based on the context below. If the question cannot be answered
-    using the information provided answer with "I don't know". Don't include new questions in your answers.
-
-    Context: {context}
-
-    Question: {question}
-
-    Answer: """
+    template = """Use the following pieces of context to answer the question at the end. 
+If you don't know the answer, just say that you don't know, don't try to make up an answer. 
+Use three sentences maximum and keep the answer as concise as possible. 
+{context}
+Question: {question}
+Helpful Answer:"""
 
     return PromptTemplate(template=template, input_variables=["context", "question"])
 
@@ -66,7 +46,7 @@ if __name__ == "__main__":
     # from langchain.memory import ConversationBufferMemory
     # memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
 
-    qa = RetrievalQA.from_chain_type(llm=init_llama_cpp(),
+    qa_chain = RetrievalQA.from_chain_type(llm=init_llm(),
                                      chain_type="stuff",
                                      retriever=store.as_retriever(),
                                      chain_type_kwargs={"prompt": prompt_template()},
@@ -75,9 +55,15 @@ if __name__ == "__main__":
 
     debug = bool(os.environ.get("DEBUG"))
     langchain.debug = debug
-    qa.verbose = debug
+    qa_chain.verbose = debug
 
-    print("\033c\033[3J", end='')
-    print(f"Using model: {MODEL_PATH}")
-    query = input("Ask me anything about Dagger: ")
-    result = qa.run(query)
+    # Clear screen
+    # print("\033c\033[3J", end='')
+    q = input("Ask me anything about Dagger: ")
+
+    if debug:
+        docs = store.similarity_search(q)
+        print(f"# Found {len(docs)} relevant documents")
+
+    qa_chain({"query": q})
+    print()
