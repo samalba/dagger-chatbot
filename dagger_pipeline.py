@@ -34,7 +34,9 @@ def sanitize_documents(client: dagger.Client) -> dagger.Directory:
     return docs
 
 
-def split_vectorize_documents(client: dagger.Client, docs: dagger.Directory) -> dagger.Directory:
+async def split_vectorize_documents(client: dagger.Client):
+    docs = sanitize_documents(client)
+
     directory = (
         client.container()
         .from_("python:3.11-slim-bookworm")
@@ -55,40 +57,56 @@ def split_vectorize_documents(client: dagger.Client, docs: dagger.Directory) -> 
         .directory("/out")
     )
 
-    return directory
+    return directory.export("assets/vectordb")
 
 
-# def fetch_model(client: dagger.Client) -> dagger.Directory:
-#     filename = "llama-2-7b-chat.ggmlv3.q4_0.bin"
-#     model_file = client.http(f"https://huggingface.co/TheBloke/Llama-2-7B-Chat-GGML/resolve/main/{filename}")
-#     model_filepath = os.path.join(f"assets/model/{filename}")
+#FIXME: ollama currently does not support external hosts
+# async def fetch_ollama_models(client: dagger.Client):
+#     ollama_repository = client.git("https://github.com/jmorganca/ollama.git").branch("main").tree()
 
-#     if os.path.exists(model_filepath):
-#         print(f"Skipping model file download, use the one found at: {model_filepath}")
-#         return client.directory()
-
-#     directory = (
-#         client.directory()
-#         .with_file(path=filename, source=model_file)
+#     ollama_binary = (
+#         client.container().from_("golang:1.20")
+#         .with_workdir("/go/src/github.com/jmorganca/ollama")
+#         .with_directory(".", ollama_repository)
+#         .with_exec(["sh", "-c", "CGO_ENABLED=1 go build -ldflags '-linkmode external -extldflags \"-static\"' ."])
+#         .file("ollama")
 #     )
 
-#     return directory
+#     ollama_models = client.cache_volume("ollama-models")
 
+#     ollama_models_local_path = os.path.expanduser(os.path.join("~", ".ollama", "models"))
+#     ollama_server = (
+#         client.container().from_("alpine")
+#         .with_file("/bin/ollama", ollama_binary, 0o555)
+#         .with_env_variable("OLLAMA_HOST", "0.0.0.0")
+#         .with_mounted_cache("/root/.ollama/models", ollama_models)
+#         .with_exec(["/bin/ollama", "serve"])
+#         .with_exposed_port(11434)
+#     )
 
-def initialize_ollama(client: dagger.Client):
-    ollama_repository = client.git("https://github.com/jmorganca/ollama.git").branch("main").tree()
-    ollama = ollama_repository.docker_build()
-    ollama.with_exec(["pull", "llama2"])
+#     ollama_client = (
+#         client.container().from_("alpine")
+#         .with_file("/bin/ollama", ollama_binary, 0o555)
+#         .with_service_binding("ollama-server", ollama_server)
+#         .with_env_variable("OLLAMA_HOST", "ollama-server")
+#         .with_exec(["/bin/ollama", "pull", "llama2"])
+#     )
+
+#     await ollama_client.sync()
+
+#     return (
+#         client.container().from_("alpine")
+#         .with_mounted_cache("ollama_models", ollama_models)
+#         .directory("ollama_models")
+#         .export(ollama_models_local_path)
+#     )
 
 
 async def generate_assets():
     async with dagger.Connection(dagger.Config(log_output=sys.stderr)) as client:
-        documents = sanitize_documents(client)
-        vectordb = split_vectorize_documents(client, documents)
-
         async with anyio.create_task_group() as tg:
-            tg.start_soon(vectordb.export, "assets/vectordb")
-            #tg.start_soon(model_file.export, "assets/model")
+            tg.start_soon(split_vectorize_documents, client)
+            #tg.start_soon(fetch_ollama_models, client)
 
 
 if __name__ == "__main__":
