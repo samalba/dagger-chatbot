@@ -61,52 +61,53 @@ async def split_vectorize_documents(client: dagger.Client):
 
 
 #FIXME: ollama currently does not support external hosts
-# async def fetch_ollama_models(client: dagger.Client):
-#     ollama_repository = client.git("https://github.com/jmorganca/ollama.git").branch("main").tree()
+async def fetch_ollama_models(client: dagger.Client):
+    ollama_repository = client.git("https://github.com/jmorganca/ollama.git").branch("main").tree()
 
-#     ollama_binary = (
-#         client.container().from_("golang:1.20")
-#         .with_workdir("/go/src/github.com/jmorganca/ollama")
-#         .with_directory(".", ollama_repository)
-#         .with_exec(["sh", "-c", "CGO_ENABLED=1 go build -ldflags '-linkmode external -extldflags \"-static\"' ."])
-#         .file("ollama")
-#     )
+    ollama_binary = (
+        client.container().from_("golang:1.20")
+        .with_workdir("/go/src/github.com/jmorganca/ollama")
+        .with_directory(".", ollama_repository)
+        .with_exec(["sh", "-c", "CGO_ENABLED=1 go build -ldflags '-linkmode external -extldflags \"-static\"' ."])
+        .file("ollama")
+    )
 
-#     ollama_models = client.cache_volume("ollama-models")
+    ollama_models = client.cache_volume("ollama-models")
 
-#     ollama_models_local_path = os.path.expanduser(os.path.join("~", ".ollama", "models"))
-#     ollama_server = (
-#         client.container().from_("alpine")
-#         .with_file("/bin/ollama", ollama_binary, 0o555)
-#         .with_env_variable("OLLAMA_HOST", "0.0.0.0")
-#         .with_mounted_cache("/root/.ollama/models", ollama_models)
-#         .with_exec(["/bin/ollama", "serve"])
-#         .with_exposed_port(11434)
-#     )
+    ollama_models_local_path = os.path.expanduser(os.path.join("~", ".ollama", "models"))
+    ollama_server = (
+        client.container().from_("alpine")
+        .with_file("/bin/ollama", ollama_binary, 0o555)
+        .with_env_variable("OLLAMA_HOST", "0.0.0.0")
+        .with_mounted_cache("/root/.ollama/models", ollama_models)
+        .with_exec(["/bin/ollama", "serve"])
+        .with_exposed_port(11434)
+    )
 
-#     ollama_client = (
-#         client.container().from_("alpine")
-#         .with_file("/bin/ollama", ollama_binary, 0o555)
-#         .with_service_binding("ollama-server", ollama_server)
-#         .with_env_variable("OLLAMA_HOST", "ollama-server")
-#         .with_exec(["/bin/ollama", "pull", "llama2"])
-#     )
+    ollama_client = (
+        client.container().from_("alpine")
+        .with_file("/bin/ollama", ollama_binary, 0o555)
+        .with_service_binding("ollama-server", ollama_server)
+         #FIXME: This does not work currently, it's ignored and it tries to connect to localhost (hangs indefinitely)
+        .with_env_variable("OLLAMA_HOST", "ollama-server")
+        .with_exec(["/bin/ollama", "pull", "llama2"])
+    )
 
-#     await ollama_client.sync()
+    await ollama_client.sync()
 
-#     return (
-#         client.container().from_("alpine")
-#         .with_mounted_cache("ollama_models", ollama_models)
-#         .directory("ollama_models")
-#         .export(ollama_models_local_path)
-#     )
+    return (
+        client.container().from_("alpine")
+        .with_mounted_cache("ollama_models", ollama_models)
+        .directory("ollama_models")
+        .export(ollama_models_local_path)
+    )
 
 
 async def generate_assets():
     async with dagger.Connection(dagger.Config(log_output=sys.stderr)) as client:
         async with anyio.create_task_group() as tg:
             tg.start_soon(split_vectorize_documents, client)
-            #tg.start_soon(fetch_ollama_models, client)
+            tg.start_soon(fetch_ollama_models, client)
 
 
 if __name__ == "__main__":
