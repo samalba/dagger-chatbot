@@ -1,19 +1,21 @@
+import os
 import sys
 import re
 
 
 def sanitize(filepath):
     data = ""
+    base_dir = os.path.dirname(filepath)
 
     with open(filepath) as f:
         data = f.read()
 
     # strip header
     n = data.find("\n# ")
-    if n == -1:
-        print("Can't find title")
-        return
-    data = data[n+1:]
+    if n >= 0:
+        data = data[n+1:]
+    else:
+        print(f"warning: can't find title in {filepath}")
 
     # strip tags
     data = re.sub(r"\<Tab.+\n", "", data)
@@ -25,7 +27,7 @@ def sanitize(filepath):
         match = False
 
         for match in re.finditer(r"file=(\./.*)\n", data):
-            fpath = match.group(1)
+            fpath = os.path.join(base_dir, match.group(1))
             with open(fpath) as f:
                 data = "{}\n{}\n{}".format(data[:match.start(0)], f.read(), data[match.end(0):])
             match = True
@@ -39,13 +41,15 @@ def sanitize(filepath):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 3:
-        print(f"Usage: {sys.argv[0]} input-path output-path")
+    if len(sys.argv) < 2:
+        print(f"Usage: {sys.argv[0]} filepath")
         sys.exit(1)
 
-    input_file = sys.argv[1]
-    output_file = sys.argv[2]
+    filepath = sys.argv[1]
 
-    doc = sanitize(input_file)
-    with open(output_file, "+w") as f:
+    doc = sanitize(filepath)
+    print(f"sanitized file: {filepath}")
+
+    # replace the original file with the sanitized one
+    with open(filepath, "w") as f:
         f.write(doc)

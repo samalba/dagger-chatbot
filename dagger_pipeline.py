@@ -15,25 +15,24 @@ def sanitize_documents(client: dagger.Client) -> dagger.Directory:
         .with_directory("/out", client.directory())
         .with_mounted_file("/app/app.py", client.host().file("./scripts/sanitize_markdown.py"))
         # dagger docs
-        .with_mounted_directory("/src", dagger_repository.directory("docs/current"))
-        .with_workdir("/src")
-        .with_exec(["python", "/app/app.py", "cookbook.md", "/out/cookbook_clean.md"])
-        .directory("/out")
+        .with_mounted_directory("/docs", dagger_repository.directory("docs/current"))
+        .with_workdir("/docs")
+        # .with_exec(["python", "/app/app.py", "cookbook.md", "/out/cookbook_clean.md"])
+        .with_exec(["sh", "-c", "find /docs -name '*.md' -exec python /app/app.py {} \\;"])
+        .directory("/docs")
     )
 
-    # Add other files we want to index
+    # Add other files we want to index from the base repository
     docs = directory.with_directory(".", dagger_repository,
                                     include=[
                                         ".changes/v*.md",
                                         "CHANGELOG.md",
-                                        "docs/current/index.md",
-                                        "docs/current/faq.md",
                                         ])
 
     return docs
 
 
-async def split_vectorize_documents(client: dagger.Client):
+def split_vectorize_documents(client: dagger.Client):
     docs = sanitize_documents(client)
 
     directory = (
