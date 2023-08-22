@@ -66,5 +66,12 @@ if __name__ == "__main__":
         docs = store.similarity_search(q)
         print(f"# Found {len(docs)} relevant documents")
 
+    if os.environ.get("DOCS"):
+        docs = store.similarity_search(q)
+        for d in docs:
+            print(d.page_content)
+            print("\n---------------------\n")
+        import sys; sys.exit(0)
+
     qa_chain({"query": q})
     print()
