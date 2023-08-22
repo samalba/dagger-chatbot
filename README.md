@@ -33,7 +33,7 @@ Several assets are needed for the chatbot to run:
 How to generate the assets:
 
 ```shell
-./dagger_pipeline.py
+dagger run ./dagger_pipeline.py
 ```
 
 ## Run the chatbot
