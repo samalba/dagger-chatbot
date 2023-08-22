@@ -9,7 +9,7 @@ from langchain.embeddings import HuggingFaceEmbeddings
 def split_vectorize_docs(input_directory, vectordb_path):
     texts = []
 
-    loader = DirectoryLoader(input_directory, glob="**/*.md", show_progress=True)
+    loader = DirectoryLoader(input_directory, glob="**/*.md", load_hidden=True, show_progress=True)
     documents = loader.load()
     # text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
     text_splitter = MarkdownTextSplitter(chunk_size=1024)
