@@ -9,25 +9,26 @@ def sanitize_documents(client: dagger.Client) -> dagger.Directory:
     # Dagger git repository
     dagger_repository = client.git("https://github.com/dagger/dagger.git").branch("main").tree()
 
-    directory = (
-        client.container()
-        .from_("python:3.11-slim-bookworm")
-        .with_directory("/out", client.directory())
-        .with_mounted_file("/app/app.py", client.host().file("./scripts/sanitize_markdown.py"))
-        # dagger docs
-        .with_mounted_directory("/docs", dagger_repository.directory("docs/current"))
-        .with_workdir("/docs")
-        # .with_exec(["python", "/app/app.py", "cookbook.md", "/out/cookbook_clean.md"])
-        .with_exec(["sh", "-c", "find /docs \\( -name '*.md' -and -not -name '*-cue*' -and -not -path '*/sdk/cue/*' \\) -exec python /app/app.py {} \\;"])
-        .directory("/docs")
-    )
-
-    # Add other files we want to index from the base repository
-    docs = directory.with_directory(".", dagger_repository,
+    # Create a new directory with only the files we need from the repository
+    dir = client.directory()
+    dir = dir.with_directory(".", dagger_repository,
                                     include=[
                                         ".changes/v*.md",
                                         "CHANGELOG.md",
-                                        ])
+                                        ]
+                                    )
+    dir = dir.with_directory(".", dagger_repository.directory("docs/current"), exclude=["sdk/cue"])
+
+    docs = (
+        client.container()
+        .from_("python:3.11-slim-bookworm")
+        .with_mounted_file("/app/app.py", client.host().file("./scripts/sanitize_markdown.py"))
+        # dagger docs
+        .with_mounted_directory("/docs", dir)
+        .with_workdir("/docs")
+        .with_exec(["sh", "-c", "find /docs \\( -name '*.md' \\) -exec python /app/app.py {} \\;"])
+        .directory("/docs")
+    )
 
     return docs
 
