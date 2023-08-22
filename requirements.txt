@@ -1,6 +1,4 @@
 chromadb==0.4.3
 langchain==0.0.262
 sentence-transformers==2.2.2
-# https://github.com/dagger/dagger/issues/5593
-#dagger-io==0.8.1
-dagger-io==0.6.4
+dagger-io==0.8.4
