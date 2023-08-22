@@ -20,6 +20,7 @@ def init_llm():
 
     llm = Ollama(
         model="llama2",
+        temperature=0.7,
         verbose=debug,
         callback_manager=CallbackManager([StreamingStdOutCallbackHandler()])
     )

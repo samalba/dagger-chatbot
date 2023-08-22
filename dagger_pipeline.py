@@ -18,7 +18,7 @@ def sanitize_documents(client: dagger.Client) -> dagger.Directory:
         .with_mounted_directory("/docs", dagger_repository.directory("docs/current"))
         .with_workdir("/docs")
         # .with_exec(["python", "/app/app.py", "cookbook.md", "/out/cookbook_clean.md"])
-        .with_exec(["sh", "-c", "find /docs -name '*.md' -exec python /app/app.py {} \\;"])
+        .with_exec(["sh", "-c", "find /docs \\( -name '*.md' -and -not -name '*-cue*' -and -not -path '*/sdk/cue/*' \\) -exec python /app/app.py {} \\;"])
         .directory("/docs")
     )
 

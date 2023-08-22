@@ -10,6 +10,10 @@ def sanitize(filepath):
     with open(filepath) as f:
         data = f.read()
 
+    # ignore old docs
+    if data.find('```cue') >= 0:
+        return ""
+
     # strip header
     n = data.find("\n# ")
     if n >= 0:
@@ -48,7 +52,10 @@ if __name__ == "__main__":
     filepath = sys.argv[1]
 
     doc = sanitize(filepath)
-    print(f"sanitized file: {filepath}")
+    if len(doc) == 0:
+        print(f"ignored file: {filepath}")
+    else:
+        print(f"sanitized file: {filepath}")
 
     # replace the original file with the sanitized one
     with open(filepath, "w") as f:
