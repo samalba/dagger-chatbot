@@ -1,6 +1,14 @@
 # dagger-chatbot
 
-Chatbot that understands Dagger pipelines
+Chatbot that understands Dagger pipelines and can help you using Dagger.
+
+It's an alternative to reading documentation.
+
+Tech used:
+
+- Langchain
+- Ollama
+- Dagger Python SDK
 
 ## Install dependencies
 
